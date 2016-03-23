@@ -9,6 +9,9 @@
 #include "BMVelocityFilter.h"
 #include "Constants.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void BMVelocityFilter_init(BMVelocityFilter* f, float sampleRate, bool stereo){
     BMMultiLevelBiquad_init(&f->bqf, 1, sampleRate, stereo, true);
@@ -82,3 +85,7 @@ void BMVelocityFilter_setVelocityGainRange(BMVelocityFilter* f, float minGainDb,
 void BMVelocityFilter_destroy(BMVelocityFilter* f){
     BMMultiLevelBiquad_destroy(&f->bqf);
 }
+
+#ifdef __cplusplus
+}
+#endif

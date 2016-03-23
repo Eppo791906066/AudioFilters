@@ -9,10 +9,11 @@
 #ifndef BMGetOSVersion_h
 #define BMGetOSVersion_h
 
-#include <stdio.h>
 #include <stdbool.h>
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * To translate from build numbers to commercialized version numbers, see
@@ -31,6 +32,8 @@ bool BM_isMacOS();
 // returns true if running on iOS
 bool BM_isiOS();
 
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* BMGetOSVersion_h */

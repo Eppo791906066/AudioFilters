@@ -11,7 +11,9 @@
 #include "BMComplexMath.h"
 #include "BMGetOSVersion.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * function declarations for use within this file
@@ -579,3 +581,7 @@ double BMMultiLevelBiquad_groupDelay(BMMultiLevelBiquad* bqf, double freq, doubl
     
     return delay;
 }
+
+#ifdef __cplusplus
+}
+#endif

@@ -11,6 +11,10 @@
 
 #include "BMMultiLevelBiquad.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct BMVelocityFilter{
     BMMultiLevelBiquad bqf;
     float maxGainDb, minGainDb, centreVelocity;
@@ -66,5 +70,8 @@ void BMVelocityFilter_setVelocityGainRange(BMVelocityFilter* f, float minGainDb,
  */
 void BMVelocityFilter_destroy(BMVelocityFilter* f);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* BMVelocityFilter_h */

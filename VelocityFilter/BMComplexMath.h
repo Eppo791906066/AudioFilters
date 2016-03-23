@@ -12,6 +12,10 @@
 #include <Accelerate/Accelerate.h>
 #include "Constants.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 static inline DSPDoubleComplex DSPDoubleComplex_cmul(DSPDoubleComplex a, DSPDoubleComplex b){
     DSPDoubleComplex result;
     result.real = (a.real * b.real) - (a.imag * b.imag);
@@ -79,5 +83,9 @@ static inline DSPDoubleComplex DSPDoubleComplex_z(double f, double fs){
     
     return z;
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* ComplexMath_h */

@@ -9,9 +9,11 @@
 #ifndef BMMultiLevelBiquad_h
 #define BMMultiLevelBiquad_h
 
-#include <stdio.h>
 #include <Accelerate/Accelerate.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct BMMultiLevelBiquad {
     // dynamic memory
@@ -104,5 +106,8 @@ void BMMultiLevelBiquad_tfMagVector(BMMultiLevelBiquad* bqf, const float *freque
 // specified frequency.
 double BMMultiLevelBiquad_groupDelay(BMMultiLevelBiquad* bqf, double freq, double sampleRate);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* BMMultiLevelBiquad_h */

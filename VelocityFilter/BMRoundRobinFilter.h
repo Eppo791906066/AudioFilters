@@ -16,6 +16,10 @@
 
 #include "BMMultiLevelBiquad.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct BMRoundRobinFilter{
     BMMultiLevelBiquad bqf;
     float minFc, maxFc, gainRange_db;
@@ -58,5 +62,8 @@ void BMRoundRobinFilter_newNote(BMRoundRobinFilter* f);
  */
 void BMRoundRobinFilter_destroy(BMRoundRobinFilter* f);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* BMRoundRobinFilter_h */

@@ -8,6 +8,9 @@
 
 #include "BMRoundRobinFilter.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void BMRoundRobinFilter_processBufferStereo(BMRoundRobinFilter* f, const float* inL, const float* inR, float* outR, float* outL, size_t numSamples){
     BMMultiLevelBiquad_processBufferStereo(&f->bqf, inL, inR, outL, outR, numSamples);
@@ -51,3 +54,8 @@ inline void BMRoundRobinFilter_newNote(BMRoundRobinFilter* f){
 void BMRoundRobinFilter_destroy(BMRoundRobinFilter* f){
     BMMultiLevelBiquad_destroy(&f->bqf);
 }
+    
+
+#ifdef __cplusplus
+}
+#endif

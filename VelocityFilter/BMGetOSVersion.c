@@ -11,6 +11,9 @@
 #include <sys/sysctl.h>
 #import <TargetConditionals.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 bool BM_isMacOS(){
     #if TARGET_OS_MAC
@@ -62,3 +65,7 @@ int BM_getOSMajorBuildNumber(){
     
     return majorBuildNumber;
 }
+
+#ifdef __cplusplus
+}
+#endif
