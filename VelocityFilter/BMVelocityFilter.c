@@ -68,6 +68,9 @@ void BMVelocityFilter_newNote(BMVelocityFilter* f, float velocity, size_t MIDINo
                                     1);
 }
 
+
+
+
 void BMVelocityFilter_setVelocityGainRange(BMVelocityFilter* f, float minGainDb, float maxGainDb, float centreVelocity){
     assert(maxGainDb>=0.0 && minGainDb<=0.0);
     assert(centreVelocity < 127.0 && centreVelocity > 0.0);
