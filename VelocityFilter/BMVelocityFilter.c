@@ -10,108 +10,72 @@
 #include "Constants.h"
 
 
-void BMVelocityFilter_randomiseRR(BMVelocityFilter* vf);
-
-void BMVelocityFilter_init(BMVelocityFilter* vf, float sampleRate, size_t rrNumBands, float rrMinFc, float rrMaxFc, float rrGainRange_db, bool hasVelocity, bool stereo){
-    vf->rrNumBands = rrNumBands;
-    vf->rrMinFc = rrMinFc;
-    vf->rrMaxFc = rrMaxFc;
-    vf->rrGainRange_db = rrGainRange_db;
-    vf->velocityEnabled = hasVelocity;
-    vf->roundRobinEnabled = true;
+void BMVelocityFilter_init(BMVelocityFilter* f, float sampleRate, bool stereo){
+    BMMultiLevelBiquad_init(&f->bqf, 1, sampleRate, stereo, true);
     
-    // velocity requires one additional level of filtering
-    size_t numLevels = hasVelocity ? rrNumBands+1 : rrNumBands;
+    f->centreVelocity = 100.0;
     
-    BMMultiLevelBiquad_init(&vf->bqf, numLevels, sampleRate, stereo, true);
-    
-    // initialize the round robin filter with a random setting
-    BMVelocityFilter_randomiseRR(vf);
-    
-    // initialize the velocity filter with bypass
-    if (hasVelocity) {
-        float fcForMIDINote = 1000.0;
-        BMVelocityFilter_newNoteWithVelocity(vf, 100, 0, &fcForMIDINote);
-    }
-}
-
-
-void BMVelocityFilter_initNoRR(BMVelocityFilter* vf, float sampleRate, bool stereo){
-    vf->velocityEnabled = true;
-    vf->roundRobinEnabled = false;
-    
-    // velocity requires one additional level of filtering
-    size_t numLevels = 1;
-    
-    BMMultiLevelBiquad_init(&vf->bqf, numLevels, sampleRate, stereo, true);
-    
+    // initialise the filter to allpass
     float fcForMIDINote = 1000.0;
-    BMVelocityFilter_newNoteWithVelocity(vf, 100, 0, &fcForMIDINote);
+    BMVelocityFilter_newNote(f, 100, 0, &fcForMIDINote);
 }
 
 
-// this is just an alias for randomiseRR
-void BMVelocityFilter_newNoteWithoutVelocity(BMVelocityFilter* vf){
-    BMVelocityFilter_randomiseRR(vf);
+
+void BMVelocityFilter_processBufferStereo(BMVelocityFilter* f, const float* inL, const float* inR, float* outR, float* outL, size_t numSamples){
+    BMMultiLevelBiquad_processBufferStereo(&f->bqf, inL, inR, outL, outR, numSamples);
 }
 
-inline void BMVelocityFilter_randomiseRR(BMVelocityFilter* vf){
-    float fc = vf->rrMinFc;
+
+
+void BMVelocityFilter_processBufferMono(BMVelocityFilter* f, const float* input, float* output, size_t numSamples){
+    BMMultiLevelBiquad_processBufferMono(&f->bqf, input, output, numSamples);
+}
+
+
+
+void BMVelocityFilter_newNote(BMVelocityFilter* f, float velocity, size_t MIDINoteNumber, float* fcForMIDINote){
+    assert(velocity >= 0.0 && velocity <= 127.0);
     
-    // find the space between individual peaks in the filters
-    // spacing them evenly in linear frequency
-    float peakSpacing = (vf->rrMaxFc - vf->rrMinFc)/(float)(vf->rrNumBands - 1);
     
-    for (size_t i=0; i<vf->rrNumBands; i++) {
-        // find out if the rr filters start at level 1 or 0
-        size_t shiftForVelFilter = (vf->velocityEnabled) ? 1 : 0;
-        
-        float gain_db = (((float)rand()/(float)RAND_MAX)-0.5)*2.0*vf->rrGainRange_db;
-        
-        // note that Q = peakSpacing
-        BMMultiLevelBiquad_setBell(&(vf->bqf), fc, peakSpacing, gain_db, i+shiftForVelFilter);
-        
-        // move the fc over for the next peak
-        fc += peakSpacing;
-    }
-}
-
-
-
-void BMVelocityFilter_processBufferStereo(BMVelocityFilter* vf, const float* inL, const float* inR, float* outR, float* outL, size_t numSamples){
-    BMMultiLevelBiquad_processBufferStereo(&vf->bqf, inL, inR, outL, outR, numSamples);
-}
-
-
-
-void BMVelocityFilter_processBufferMono(BMVelocityFilter* vf, const float* input, float* output, size_t numSamples){
-    BMMultiLevelBiquad_processBufferMono(&vf->bqf, input, output, numSamples);
-}
-
-
-
-void BMVelocityFilter_newNoteWithVelocity(BMVelocityFilter* vf, float velocity, size_t MIDINoteNumber, float* fcForMIDINote){
-    if (vf->roundRobinEnabled) BMVelocityFilter_randomiseRR(vf);
-    
-    // find the high shelf filter gain in decibels for the give velocity
+    /*
+     *  three cases: velovity > centre
+     *               velocity < centre
+     *               velocity == centre
+     */
+    // velocity > centre => boost gain
     float gain;
-    if (velocity > 100.0) gain = vf->velMaxGainDb*(velocity-100.0)/27.0;
-    else gain = vf->velMinGainDb*(100.0-velocity)/100.0;
+    if (velocity > f->centreVelocity)
+        gain = f->maxGainDb*(velocity-f->centreVelocity)/(127.0 - f->centreVelocity);
+    
+    // velocity < centre => cut gain
+    else if (velocity < f->centreVelocity)
+        gain = f->minGainDb*(f->centreVelocity - velocity)/(f->centreVelocity);
+    
+    // velocity == centre => unity gain
+    else gain = 1.0;
+    
+    
+    // convert to decibels
     float gain_db = BM_GAIN_TO_DB(gain);
     
-    // set the high shelf filter on the first level,
+    
+    // set the high shelf filter gain and cutoff frequency,
     // looking up the fc from the table in fcForMIDINote
-    BMMultiLevelBiquad_setHighShelf(&vf->bqf,
+    BMMultiLevelBiquad_setHighShelf(&f->bqf,
                                     fcForMIDINote[MIDINoteNumber],
                                     gain_db,
                                     1);
-    
-    // do a new randomised filtering for round robin simulation
-    if(vf->roundRobinEnabled) BMVelocityFilter_randomiseRR(vf);
 }
 
+void BMVelocityFilter_setVelocityGainRange(BMVelocityFilter* f, float minGainDb, float maxGainDb, float centreVelocity){
+    assert(maxGainDb>=0.0 && minGainDb<=0.0);
+    assert(centreVelocity < 127.0 && centreVelocity > 0.0);
+    
+    f->minGainDb = minGainDb;
+    f->maxGainDb = maxGainDb;
+}
 
-
-void BMVelocityFilter_setRRGainRange(BMVelocityFilter* vf, float rrGainRange_db){
-    vf->rrGainRange_db = rrGainRange_db;
+void BMVelocityFilter_destroy(BMVelocityFilter* f){
+    BMMultiLevelBiquad_destroy(&f->bqf);
 }
