@@ -10,6 +10,7 @@
 #include "Constants.h"
 #include "BMComplexMath.h"
 #include "BMGetOSVersion.h"
+#include <assert.h>
 
 #ifdef __cplusplus
 extern "C" {
