@@ -9,11 +9,9 @@
 #ifndef BMMultiLevelBiquad_h
 #define BMMultiLevelBiquad_h
 
+#include <stdio.h>
 #include <Accelerate/Accelerate.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 typedef struct BMMultiLevelBiquad {
     // dynamic memory
@@ -40,10 +38,10 @@ void BMMultiLevelBiquad_processBufferStereo(BMMultiLevelBiquad* bqf, const float
 // process a mono buffer of samples
 void BMMultiLevelBiquad_processBufferMono(BMMultiLevelBiquad* bqf, const float* input, float* output, size_t numSamples);
 
-// must be called once before using the filter.  To change the number of
-// levels in the fitler, call destroy first, then call this function with
-// the new number of levels
 /*
+ * init must be called once before using the filter.  To change the number of
+ * levels in the fitler, call destroy first, then call this function with
+ * the new number of levels
  *
  * monoRealTimeUpdate: If you are updating coefficients of a MONO filter in
  *                     realtime, set this to true. Processing of audio is
@@ -72,7 +70,7 @@ void BMMultiLevelBiquad_setHighShelf(BMMultiLevelBiquad* bqf, float fc, float ga
 void BMMultiLevelBiquad_setLowPass12db(BMMultiLevelBiquad* bqf, double fc, double sampleRate, size_t level);
 
 
-void BMMultiLevelBiquad_setHighPass12db(BMMultiLevelBiquad* bqf, double fc, double sampleRate, size_t level);
+//void BMMultiLevelBiquad_setHighPass12db(BMMultiLevelBiquad* bqf, double fc, double sampleRate, size_t level);
 
 
 void BMMultiLevelBiquad_setHighPass6db(BMMultiLevelBiquad* bqf, double fc, double sampleRate, size_t level);
@@ -89,7 +87,7 @@ void BMMultiLevelBiquad_setGain(BMMultiLevelBiquad* bqf, float gain_db);
 
 
 /*
- * frequency: an an array specifying frequencies at which we want to evaluate 
+ * frequency: an an array specifying frequencies at which we want to evaluate
  * the transfer function magnitude of the filter.
  *
  * magnitude: an array for storing the result
@@ -106,8 +104,5 @@ void BMMultiLevelBiquad_tfMagVector(BMMultiLevelBiquad* bqf, const float *freque
 // specified frequency.
 double BMMultiLevelBiquad_groupDelay(BMMultiLevelBiquad* bqf, double freq, double sampleRate);
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* BMMultiLevelBiquad_h */

@@ -10,11 +10,9 @@
 #include "Constants.h"
 #include "BMComplexMath.h"
 #include "BMGetOSVersion.h"
+#include <stdlib.h>
 #include <assert.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /*
  * function declarations for use within this file
@@ -49,6 +47,9 @@ bool BMMultiLevelBiquad_OSSupportsRealtimeUpdate();
 
 void BMMultiLevelBiquad_processBufferStereo(BMMultiLevelBiquad* bqf, const float* inL, const float* inR, float* outL, float* outR, size_t numSamples){
     
+    // this function is only for two channel filtering
+    assert(bqf->numChannels == 2);
+    
     // update filter coefficients if necessary
     if (bqf->needsUpdate) BMMultiLevelBiquad_updateNow(bqf);
     
@@ -56,7 +57,7 @@ void BMMultiLevelBiquad_processBufferStereo(BMMultiLevelBiquad* bqf, const float
     const float* twoChannelInput [2];
     twoChannelInput[0] = inL;
     twoChannelInput[1] = inR;
-
+    
     // link the two input buffers into a single multidimensional array
     float* twoChannelOutput [2];
     twoChannelOutput[0] = outL;
@@ -76,6 +77,9 @@ void BMMultiLevelBiquad_processBufferStereo(BMMultiLevelBiquad* bqf, const float
 
 void BMMultiLevelBiquad_processBufferMono(BMMultiLevelBiquad* bqf, const float* input, float* output, size_t numSamples){
     
+    // this function is only for single channel filtering
+    assert(bqf->numChannels == 1);
+    
     // update filter coefficients if necessary
     if (bqf->needsUpdate) BMMultiLevelBiquad_updateNow(bqf);
     
@@ -89,9 +93,9 @@ void BMMultiLevelBiquad_processBufferMono(BMMultiLevelBiquad* bqf, const float* 
         
         // apply a multiChannel biquad filter
         vDSP_biquadm(bqf->multiChannelFilterSetup, (const float* _Nonnull * _Nonnull)inputP, 1, outputP, 1, numSamples);
-    
-    
-    // if using the single channel filter
+        
+        
+        // if using the single channel filter
     } else {
         vDSP_biquad(bqf->singleChannelFilterSetup, bqf->monoDelays, input, 1, output, 1, numSamples);
     }
@@ -103,7 +107,7 @@ void BMMultiLevelBiquad_processBufferMono(BMMultiLevelBiquad* bqf, const float* 
 
 // Find out if the OS supports vDSP_biquadm updates in realtime
 bool BMMultiLevelBiquad_OSSupportsRealtimeUpdate(){
-
+    
     bool OSSupportsRealtimeUpdate = false;
     
     // iOS >= 9.0 (build# 13) supports realtime updates
@@ -179,8 +183,8 @@ inline void BMMultiLevelBiquad_updateNow(BMMultiLevelBiquad* bqf){
         
         // update the coefficients
         vDSP_biquadm_SetCoefficientsSingle(bqf->multiChannelFilterSetup, bqf->coefficients_float, 0, 0, bqf->numLevels, bqf->numChannels);
-    
-    // not using realtime updates
+        
+        // not using realtime updates
     } else {
         BMMultiLevelBiquad_recreate(bqf);
     }
@@ -192,11 +196,13 @@ inline void BMMultiLevelBiquad_updateNow(BMMultiLevelBiquad* bqf){
 
 inline void BMMultiLevelBiquad_recreate(BMMultiLevelBiquad* bqf){
     // using multichannel vDSP_biquadm
-    if (bqf->useBiquadm) {
+    if (bqf->multiChannelFilterSetup) {
         vDSP_biquadm_DestroySetup(bqf->multiChannelFilterSetup);
         
-    // using single channel vDSP_biquad
-    } else {
+        // using single channel vDSP_biquad
+    }
+    if(bqf->singleChannelFilterSetup) {
+        
         vDSP_biquad_DestroySetup(bqf->singleChannelFilterSetup);
     }
 }
@@ -421,7 +427,7 @@ void BMMultiLevelBiquad_setHighPass12db(BMMultiLevelBiquad* bqf, double fc, doub
 }
 
 
-void BMMultiLevelBiquad_setHighPass6dbNoUpdate(BMMultiLevelBiquad* bqf, double fc, double sampleRate, size_t level){
+void BMMultiLevelBiquad_setHighPass6db(BMMultiLevelBiquad* bqf, double fc, double sampleRate, size_t level){
     assert(level < bqf->numLevels);
     
     
@@ -468,7 +474,7 @@ inline DSPDoubleComplex BMMultiLevelBiquad_tfEval(BMMultiLevelBiquad* bqf, DSPDo
     
     
     for (size_t level = 0; level <= bqf->numLevels; level++) {
-    
+        
         // both channels are the same so we just check the left one
         size_t channel = 0;
         
@@ -490,8 +496,8 @@ inline DSPDoubleComplex BMMultiLevelBiquad_tfEval(BMMultiLevelBiquad* bqf, DSPDo
                               DSPDoubleComplex_init(*a2, 0.0));
         
         out = DSPDoubleComplex_cmul(out,
-                                   DSPDoubleComplex_divide(numerator,
-                                                           denominator));
+                                    DSPDoubleComplex_divide(numerator,
+                                                            denominator));
     }
     
     return out;
@@ -527,7 +533,7 @@ double BMMultiLevelBiquad_groupDelay(BMMultiLevelBiquad* bqf, double freq, doubl
     double delay = 0.0;
     
     for (size_t level=0; level<bqf->numLevels; level++) {
-    
+        
         double b0 = bqf->coefficients[5*level];
         double b1 = bqf->coefficients[5*level + 1];
         double b2 = bqf->coefficients[5*level + 2];
@@ -582,7 +588,3 @@ double BMMultiLevelBiquad_groupDelay(BMMultiLevelBiquad* bqf, double freq, doubl
     
     return delay;
 }
-
-#ifdef __cplusplus
-}
-#endif
