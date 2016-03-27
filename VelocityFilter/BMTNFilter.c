@@ -17,6 +17,9 @@ extern "C" {
 #endif
     
     void BMTNFilter_processSample(BMTNFilter* f, float input, float* toneOut, float* noiseOut);
+    
+    
+    
 
     void BMTNFilter_init(BMTNFilter* f, size_t filterOrder, float mu, size_t delayTime){
         
@@ -37,28 +40,38 @@ extern "C" {
         f->dp = f->delayLine;
         
         
-        // set the initial position and end marker for the
+        // set the initial position and end marker for the X delay buffer
         float* XmemEnd = f->Xmem + XmemLength;
         f->Xstart =  XmemEnd - f->filterLength;
         f->X = f->Xstart;
+        f->Xlast = f->Xstart + f->filterLength - 1;
         
         
         // initialize arrays to zero
         memset(f->delayLine, 0, sizeof(float)*delayTime);
         memset(f->Xmem,0,sizeof(float)*XmemLength);
         memset(f->W,0,sizeof(float)*f->filterLength);
+        
+        // X . X is zero
+        f->XDotX = 0.0f;
     }
+    
+    
+    
     
     void BMTNFilter_processBuffer(BMTNFilter* f, const float* input, float* toneOut, float* noiseOut, size_t numSamples){
         
         // if f is not initialised, initialise it with reasonable defaults.
         if(!f->Xmem){
-            BMTNFilter_init(f, 48, 0.001, 64);
+            BMTNFilter_init(f, 64, 0.25, 150);
         }
         
         for(size_t i=0; i<numSamples; i++)
             BMTNFilter_processSample(f, input[i], toneOut+i, noiseOut+i);
     }
+    
+    
+    
     
     inline void BMTNFilter_processSample(BMTNFilter* f, float input, float* toneOut, float* noiseOut){
         
@@ -70,17 +83,28 @@ extern "C" {
         if (f->dp == f->delayLineEnd) f->dp = f->delayLine;
         
         
+        // remove the oldest element in X from XDotX
+        float xl = *f->Xlast;
+        f->XDotX -= xl * xl;
+        
+        
         // advance the X delays
         //
         // pointer decrement and wrap if necessary
         f->X--;
+        f->Xlast--;
         if(f->X < f->Xmem) {
             // move the data in X from the beginning to the end of the buffer
             memmove(f->Xstart+1, f->Xmem, sizeof(float)*f->filterLength-1);
             f->X = f->Xstart;
+            f->Xlast = f->Xstart + f->filterLength - 1;
         }
         // write the delayed input into the first position in X
         *f->X = delayedInput;
+        
+        
+        // add the first element in X to the norm
+        f->XDotX += (*f->X) * (*f->X);
         
         
         // tone is the output of the linear prediction model: tone = W.X
@@ -91,10 +115,19 @@ extern "C" {
         *noiseOut = input - *toneOut;
         
         
+        // "correct" NLMS formula:
+        //float ue = *noiseOut * fabsf(*noiseOut) * f->mu / (f->XNorm + 0.001f);
+        //
+        // our formula signed-squares the noise sample:
+        float ue = *noiseOut * fabsf(*noiseOut) * f->mu / (f->XDotX + 0.001f);
+        
+        
         // Update coefficients W = W + ue*X;
-        float ue = *noiseOut * f->mu;
         vDSP_vsma(f->X, 1, &ue, f->W, 1, f->W, 1, f->filterLength);
     }
+    
+    
+    
     
     void BMTNFilter_destroy(BMTNFilter* f){
         free(f->Xmem);
@@ -102,6 +135,8 @@ extern "C" {
         free(f->W);
     }
 
+    
+    
 #ifdef __cplusplus
 }
 #endif

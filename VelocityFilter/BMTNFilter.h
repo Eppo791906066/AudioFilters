@@ -23,7 +23,7 @@ extern "C" {
     
     typedef struct BMTNFilter {
         size_t filterLength, delayTime;
-        float mu, *Xmem, *delayLine, *W, *X, *dp, *Xstart, *delayLineEnd;
+        float mu, *Xmem, *delayLine, *W, *X, *Xlast, *dp, *Xstart, *delayLineEnd, XDotX;
     } BMTNFilter;
     
     /*
