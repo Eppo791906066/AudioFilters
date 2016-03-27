@@ -198,21 +198,24 @@ inline void BMMultiLevelBiquad_updateNow(BMMultiLevelBiquad* bqf){
 
 
 inline void BMMultiLevelBiquad_recreate(BMMultiLevelBiquad* bqf){
-    // using multichannel vDSP_biquadm
-    if (bqf->multiChannelFilterSetup) {
+    // destroy the old filter setup
+    if (bqf->multiChannelFilterSetup)
         vDSP_biquadm_DestroySetup(bqf->multiChannelFilterSetup);
-        
-        // using single channel vDSP_biquad
-    }
-    if(bqf->singleChannelFilterSetup) {
-        
+    if(bqf->singleChannelFilterSetup)
         vDSP_biquad_DestroySetup(bqf->singleChannelFilterSetup);
-    }
+    
+    // create the new filter setup
+    if(bqf->multiChannelFilterSetup)
+        vDSP_biquadm_CreateSetup(bqf->coefficients, bqf->numLevels, bqf->numChannels);
+    else
+        vDSP_biquad_CreateSetup(bqf->coefficients, bqf->numLevels);
 }
 
+    
+    
 void BMMultiLevelBiquad_destroy(BMMultiLevelBiquad* bqf){
-    if(bqf->coefficients) free(bqf->coefficients);
-    if(bqf->coefficients_float) free(bqf->coefficients_float);
+    free(bqf->coefficients);
+    free(bqf->coefficients_float);
     vDSP_biquadm_DestroySetup(bqf->multiChannelFilterSetup);
 }
 
