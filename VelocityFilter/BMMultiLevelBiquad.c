@@ -148,12 +148,12 @@ void BMMultiLevelBiquad_init(BMMultiLevelBiquad* bqf,
     
     // Allocate memory for 5 coefficients per filter,
     // 2 filters per level (left and right channels)
-    if (bqf->coefficients) free(bqf->coefficients);
+    free(bqf->coefficients);
     bqf->coefficients = malloc(numLevels*5*bqf->numChannels*sizeof(double));
     
     // repeat the allocation for floating point coefficients. We need
     // both double and float to support realtime updates
-    if (bqf->coefficients_float) free(bqf->coefficients_float);
+    free(bqf->coefficients_float);
     bqf->coefficients_float = malloc(numLevels*5*bqf->numChannels*sizeof(float));
     
     // start with all levels on bypass
