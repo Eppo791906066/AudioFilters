@@ -181,7 +181,7 @@ inline void BMMultiLevelBiquad_updateNow(BMMultiLevelBiquad* bqf){
     // using realtime updates
     if(bqf->useRealTimeUpdate){
         // convert the coefficients to floating point
-        for(size_t i=0; i<bqf->numLevels*2*5; i++)
+        for(size_t i=0; i<bqf->numLevels*bqf->numChannels*5; i++)
             bqf->coefficients_float[i] = bqf->coefficients[i];
         
         // update the coefficients
@@ -198,24 +198,25 @@ inline void BMMultiLevelBiquad_updateNow(BMMultiLevelBiquad* bqf){
 
 
 inline void BMMultiLevelBiquad_recreate(BMMultiLevelBiquad* bqf){
-    // destroy the old filter setup
+    // using multichannel vDSP_biquadm
     if (bqf->multiChannelFilterSetup)
         vDSP_biquadm_DestroySetup(bqf->multiChannelFilterSetup);
+    
+    // using single channel vDSP_biquad
     if(bqf->singleChannelFilterSetup)
         vDSP_biquad_DestroySetup(bqf->singleChannelFilterSetup);
     
-    // create the new filter setup
-    if(bqf->multiChannelFilterSetup)
+    if(bqf->useBiquadm)
+        bqf->multiChannelFilterSetup =
         vDSP_biquadm_CreateSetup(bqf->coefficients, bqf->numLevels, bqf->numChannels);
     else
+        bqf->singleChannelFilterSetup =
         vDSP_biquad_CreateSetup(bqf->coefficients, bqf->numLevels);
 }
 
-    
-    
 void BMMultiLevelBiquad_destroy(BMMultiLevelBiquad* bqf){
-    free(bqf->coefficients);
-    free(bqf->coefficients_float);
+    if(bqf->coefficients) free(bqf->coefficients);
+    if(bqf->coefficients_float) free(bqf->coefficients_float);
     vDSP_biquadm_DestroySetup(bqf->multiChannelFilterSetup);
 }
 
@@ -479,12 +480,12 @@ inline DSPDoubleComplex BMMultiLevelBiquad_tfEval(BMMultiLevelBiquad* bqf, DSPDo
     DSPDoubleComplex out = DSPDoubleComplex_init(bqf->gain, 0.0);
     
     
-    for (size_t level = 0; level <= bqf->numLevels; level++) {
+    for (size_t level = 0; level < bqf->numLevels; level++) {
         
         // both channels are the same so we just check the left one
         size_t channel = 0;
         
-        double* b0 = bqf->coefficients + level*bqf->numChannels*5 + channel*5  + 0;
+        double* b0 = bqf->coefficients + level*bqf->numChannels*5 + channel*5;
         double* b1 = b0+1;
         double* b2 = b0+2;
         double* a1 = b0+3;

@@ -83,7 +83,7 @@ extern "C" {
         if (f->dp == f->delayLineEnd) f->dp = f->delayLine;
         
         
-        // remove the oldest element in X from XDotX
+        // remove the oldest element in X from X.X
         float xl = *f->Xlast;
         f->XDotX -= xl * xl;
         
@@ -103,7 +103,7 @@ extern "C" {
         *f->X = delayedInput;
         
         
-        // add the first element in X to the norm
+        // add the newest element in X to X.X
         f->XDotX += (*f->X) * (*f->X);
         
         
